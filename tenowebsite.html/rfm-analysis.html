@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Free RFM Customer Analysis | Teno Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f0f4ff;--dark:#0a0e1a;--accent:#1a56db;--accent2:#0ea5e9;
+  --green:#10b981;--red:#ef4444;--orange:#f97316;--gold:#eab308;--purple:#8b5cf6;
+  --surface:#ffffff;--border:#e2e8f0;--muted:#6b7280;
+  --table-bg:#f8fafc;--table-hover:#f1f5f9;--table-border:#f1f5f9;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;transition:background .3s,color .3s}
+
+/* DARK MODE */
+body.dark{--bg:#0a0e1a;--dark:#f0f4ff;--surface:#111827;--border:#1e293b;--muted:#94a3b8;--table-bg:#0f172a;--table-hover:#1e293b;--table-border:#1e293b}
+body.dark .nav{background:#060912}
+body.dark .kpi-card{box-shadow:0 4px 16px rgba(0,0,0,.3)}
+body.dark .kpi-card.accent{background:linear-gradient(135deg,#1a56db,#0ea5e9)}
+body.dark th{background:var(--table-bg);color:var(--muted);border-bottom-color:var(--border)}
+body.dark td{border-bottom-color:var(--border)}
+body.dark tr:hover td{background:var(--table-hover)}
+body.dark .chart-card{background:var(--surface);border-color:var(--border)}
+body.dark .seg-card{background:var(--surface);border-color:var(--border)}
+body.dark .table-card{background:var(--surface);border-color:var(--border)}
+body.dark .table-hdr{border-bottom-color:var(--border)}
+body.dark .btn-new{background:rgba(255,255,255,.1);color:var(--dark)}
+
+/* DARK MODE TOGGLE */
+.theme-toggle{display:flex;align-items:center;gap:.4rem;background:rgba(0,0,0,.08);border:1px solid var(--border);border-radius:8px;padding:.4rem .8rem;cursor:pointer;font-size:.75rem;font-weight:600;color:var(--muted);transition:all .2s}
+body.dark .theme-toggle{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:#94a3b8}
+.theme-toggle:hover{background:rgba(0,0,0,.12)}
+body.dark .theme-toggle:hover{background:rgba(255,255,255,.15)}
+
+/* NAV */
+.nav{background:var(--dark);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.nav-brand{color:white;font-weight:800;font-size:1.1rem;text-decoration:none;display:flex;align-items:center;gap:.5rem}
+.nav-brand span{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-back{color:rgba(255,255,255,.7);font-size:.82rem;text-decoration:none;display:flex;align-items:center;gap:.4rem;transition:color .2s}
+.nav-back:hover{color:white}
+
+/* SCREENS */
+.screen{display:none;min-height:calc(100vh - 60px)}
+.screen.active{display:block}.screen.active#upload-screen{display:flex}.screen.active#process-screen{display:flex}
+
+/* UPLOAD SCREEN */
+#upload-screen{background:linear-gradient(160deg,#0a0e1a 0%,#0f172a 50%,#1e1b4b 100%);padding:3rem 1.5rem;min-height:calc(100vh - 60px);flex-direction:column;align-items:center;justify-content:center}
+.upload-hero{text-align:center;max-width:680px;margin:0 auto}
+.upload-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(26,86,219,.15);border:1px solid rgba(26,86,219,.3);color:#93c5fd;padding:.35rem 1rem;border-radius:100px;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1.5rem}
+.upload-hero h1{font-size:clamp(1.8rem,4vw,3rem);font-weight:900;color:white;line-height:1.15;margin-bottom:1rem;letter-spacing:-.03em}
+.upload-hero h1 em{font-style:normal;background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.upload-hero p{color:rgba(255,255,255,.55);font-size:1rem;line-height:1.7;margin-bottom:2.5rem}
+
+/* DROP ZONE */
+.drop-zone{background:rgba(255,255,255,.04);border:2px dashed rgba(255,255,255,.15);border-radius:20px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all .3s;position:relative;max-width:560px;margin:0 auto 2rem;width:100%}
+.drop-zone:hover,.drop-zone.drag-over{background:rgba(26,86,219,.1);border-color:rgba(26,86,219,.5);transform:translateY(-2px)}
+.drop-icon{font-size:3rem;margin-bottom:1rem;display:block}
+.drop-zone h3{color:white;font-weight:700;font-size:1.05rem;margin-bottom:.5rem}
+.drop-zone p{color:rgba(255,255,255,.4);font-size:.82rem;margin-bottom:1.2rem}
+.browse-btn{display:inline-flex;align-items:center;gap:.5rem;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;border:none;border-radius:10px;padding:.65rem 1.4rem;font-size:.85rem;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.browse-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(26,86,219,.4)}
+#file-input{display:none}
+.file-limits{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}
+.limit-tag{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:.25rem .7rem;font-size:.72rem;color:rgba(255,255,255,.5)}
+
+/* COLUMN HINTS */
+.col-hints{max-width:560px;margin:0 auto 2rem;width:100%}
+.col-hints h4{color:rgba(255,255,255,.4);font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.8rem;text-align:center}
+.col-tags{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center}
+.col-tag{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:.2rem .6rem;font-size:.72rem;color:rgba(255,255,255,.45);font-family:'Courier New',monospace}
+
+/* UPLOAD STATUS */
+.upload-status{max-width:560px;margin:0 auto;width:100%;display:none}
+.status-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:1.2rem 1.5rem;display:flex;align-items:center;gap:1rem}
+.status-icon{font-size:1.5rem;flex-shrink:0}
+.status-text{flex:1}
+.status-title{color:white;font-weight:600;font-size:.9rem;margin-bottom:.2rem}
+.status-sub{color:rgba(255,255,255,.4);font-size:.78rem}
+.progress-bar{background:rgba(255,255,255,.1);border-radius:100px;height:4px;margin-top:.8rem;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:100px;width:0%;transition:width .5s}
+.analyze-btn{display:inline-flex;align-items:center;gap:.5rem;background:linear-gradient(135deg,var(--green),#059669);color:white;border:none;border-radius:10px;padding:.75rem 1.8rem;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:1.2rem;display:none}
+.analyze-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,.4)}
+.err-card{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:1rem 1.5rem;color:#fca5a5;font-size:.85rem;font-weight:600;margin-top:.8rem;display:none}
+
+/* PROCESS SCREEN */
+#process-screen{background:linear-gradient(160deg,#0a0e1a,#0f172a);align-items:center;justify-content:center;min-height:calc(100vh - 60px)}
+.process-box{text-align:center;max-width:420px;width:100%;padding:2rem}
+.process-spinner{width:64px;height:64px;border:4px solid rgba(255,255,255,.1);border-top-color:var(--accent2);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 2rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.process-title{color:white;font-size:1.3rem;font-weight:800;margin-bottom:.5rem}
+.process-step{color:var(--accent2);font-size:.85rem;margin-bottom:2rem;min-height:1.2em;transition:all .3s}
+.process-steps-list{text-align:left;display:flex;flex-direction:column;gap:.5rem}
+.ps-item{display:flex;align-items:center;gap.75rem;gap:.75rem;font-size:.82rem;color:rgba(255,255,255,.4);padding:.4rem 0;transition:color .3s}
+.ps-item.done{color:var(--green)}
+.ps-item.active{color:white}
+.ps-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);flex-shrink:0;transition:background .3s}
+.ps-item.done .ps-dot{background:var(--green)}
+.ps-item.active .ps-dot{background:var(--accent2);box-shadow:0 0 8px var(--accent2)}
+
+/* DASHBOARD */
+#dashboard-screen{background:var(--bg);padding:2rem}
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:gap;gap:1rem}
+.dash-title h2{font-size:1.4rem;font-weight:800;color:var(--dark);letter-spacing:-.03em}
+.dash-title p{color:var(--muted);font-size:.82rem;margin-top:.2rem}
+.dash-actions{display:flex;gap:.6rem;flex-wrap:wrap}
+.btn-export{display:flex;align-items:center;gap:.4rem;padding:.55rem 1.1rem;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;border:none;transition:all .2s}
+.btn-excel{background:#217346;color:white}
+.btn-csv{background:var(--accent);color:white}
+.btn-new{background:rgba(0,0,0,.07);color:var(--dark)}
+.btn-export:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1rem;margin-bottom:2rem}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.2rem 1.5rem;transition:transform .2s,box-shadow .2s}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.kpi-label{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem}
+.kpi-value{font-size:1.5rem;font-weight:900;color:var(--dark);letter-spacing:-.03em}
+.kpi-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+.kpi-card.accent{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none}
+.kpi-card.accent .kpi-label,.kpi-card.accent .kpi-value,.kpi-card.accent .kpi-sub{color:white}
+
+/* SEGMENT CARDS */
+.seg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.8rem;margin-bottom:2rem}
+.seg-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center;position:relative;overflow:hidden}
+.seg-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.seg-card.champions::before{background:var(--green)}
+.seg-card.loyal::before{background:var(--accent)}
+.seg-card.potential::before{background:#6366f1}
+.seg-card.new::before{background:var(--purple)}
+.seg-card.attention::before{background:var(--gold)}
+.seg-card.atrisk::before{background:var(--orange)}
+.seg-card.lost::before{background:var(--red)}
+.seg-card.bigspenders::before{background:var(--gold)}
+.seg-card.inactive::before{background:var(--muted)}
+.seg-name{font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:.3rem}
+.seg-count{font-size:1.6rem;font-weight:900;color:var(--dark);letter-spacing:-.04em}
+.seg-pct{font-size:.7rem;color:var(--muted)}
+
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem}
+.chart-card h3{font-size:.82rem;font-weight:700;color:var(--dark);margin-bottom:1.2rem}
+.chart-wrap{position:relative;height:240px}
+@media(max-width:768px){.charts-row{grid-template-columns:1fr}}
+
+/* TABLE */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:2rem}
+.table-hdr{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 1.5rem;border-bottom:1px solid var(--border)}
+.table-hdr h3{font-size:.9rem;font-weight:700;color:var(--dark)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th{text-align:left;padding:.75rem 1rem;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:#f8fafc;border-bottom:1px solid var(--border)}
+td{padding:.7rem 1rem;border-bottom:1px solid #f1f5f9;color:var(--dark)}
+tr:hover td{background:#f8fafc}
+#top-table tr,#risk-table tr,#full-table tr{cursor:pointer;transition:background .15s}
+.seg-badge{display:inline-block;padding:.18rem .6rem;border-radius:100px;font-size:.68rem;font-weight:700}
+.badge-champions{background:rgba(16,185,129,.1);color:#059669}
+.badge-loyal{background:rgba(26,86,219,.1);color:#1a56db}
+.badge-potential{background:rgba(99,102,241,.1);color:#6366f1}
+.badge-new{background:rgba(139,92,246,.1);color:#8b5cf6}
+.badge-attention{background:rgba(234,179,8,.1);color:#a16207}
+.badge-atrisk{background:rgba(249,115,22,.1);color:#ea580c}
+.badge-lost{background:rgba(239,68,68,.1);color:#dc2626}
+.badge-bigspenders{background:rgba(234,179,8,.1);color:#a16207}
+.badge-inactive{background:rgba(107,114,128,.1);color:#6b7280}
+
+/* AI INSIGHTS */
+.insights-card{background:linear-gradient(135deg,#0a0e1a,#111827);border-radius:20px;padding:2rem;margin-bottom:2rem;position:relative;overflow:hidden}
+.insights-card::before{content:'';position:absolute;top:0;right:0;width:200px;height:200px;background:radial-gradient(circle,rgba(26,86,219,.08),transparent);pointer-events:none}
+.insights-card h3{color:white;font-size:1rem;font-weight:800;margin-bottom:1.5rem;display:flex;align-items:center;gap:.6rem}
+.insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+@media(max-width:768px){.insights-grid{grid-template-columns:1fr}}
+.insight-item{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1rem 1.2rem;color:rgba(255,255,255,.85);font-size:.82rem;line-height:1.65;display:flex;flex-direction:column;gap:.5rem;border-left:3px solid rgba(255,255,255,.15);transition:background .2s,border-color .2s}
+.insight-item:hover{background:rgba(255,255,255,.07)}
+.insight-item.priority-critical{border-left-color:#ef4444}
+.insight-item.priority-high{border-left-color:#f97316}
+.insight-item.priority-medium{border-left-color:#1a56db}
+.insight-item.priority-positive{border-left-color:#10b981}
+.insight-item.priority-info{border-left-color:#6366f1}
+.insight-top{display:flex;align-items:center;gap:.5rem}
+.insight-icon{flex-shrink:0;font-size:1.1rem}
+.insight-cat{font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:.15rem .5rem;border-radius:4px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
+.insight-text{flex:1}
+.insight-action{display:flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:700;color:#60a5fa;margin-top:.2rem;padding-top:.5rem;border-top:1px solid rgba(255,255,255,.06)}
+.insight-action::before{content:'💡';font-size:.7rem}
+
+
+/* FILTER BAR */
+.filter-bar{display:flex;flex-direction:column;gap:.6rem}
+.filter-segments{display:flex;gap:.35rem;flex-wrap:wrap}
+.filter-btn{padding:.3rem .7rem;border-radius:8px;font-size:.68rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap}
+.filter-btn:hover{background:rgba(26,86,219,.08);border-color:var(--accent);color:var(--accent)}
+.filter-btn.active{background:var(--accent);border-color:var(--accent);color:white}
+.filter-search{width:100%;padding:.5rem .8rem;border:1px solid var(--border);border-radius:10px;font-size:.8rem;font-family:inherit;color:var(--dark);background:var(--bg);outline:none;transition:border-color .2s}
+.filter-search:focus{border-color:var(--accent)}
+.filter-count{font-size:.72rem;color:var(--accent);font-weight:700}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .seg-grid{grid-template-columns:repeat(2,1fr)}
+  #dashboard-screen{padding:1rem}
+  .dash-header{flex-direction:column;align-items:flex-start}
+  .filter-segments{overflow-x:auto;flex-wrap:nowrap;padding-bottom:.3rem}
+}
+</style>
+</head>
+<body class="dark">
+
+<nav class="nav">
+  <a href="tenoweb.html" class="nav-brand">Teno <span>Analytics</span></a>
+  <a href="tenoweb.html" class="nav-back">← Back to Website</a>
+</nav>
+
+<!-- UPLOAD SCREEN -->
+<div id="upload-screen" class="screen active">
+  <div class="upload-hero">
+    <div class="upload-badge">🆓 Free Trial — No Account Required</div>
+    <h1>Free <em>RFM Customer</em><br>Intelligence Analysis</h1>
+    <p>Upload your sales Excel or CSV file. Our engine automatically detects your columns, cleans the data, calculates RFM scores, segments your customers, and generates a downloadable dashboard — in seconds.</p>
+  </div>
+
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+    <span class="drop-icon">📂</span>
+    <h3>Drop your sales file here</h3>
+    <p>Supports Excel (.xlsx, .xls) and CSV (.csv) files</p>
+    <button class="browse-btn" onclick="event.stopPropagation();document.getElementById('file-input').click()">
+      📁 Browse File
+    </button>
+    <div class="file-limits">
+      <span class="limit-tag">Max 5,000 rows</span>
+      <span class="limit-tag">.xlsx · .xls · .csv</span>
+      <span class="limit-tag">100% Private</span>
+    </div>
+  </div>
+
+  <div class="col-hints">
+    <h4>Your file can use any of these column names</h4>
+    <div class="col-tags">
+      <span class="col-tag">phone</span><span class="col-tag">mobile</span><span class="col-tag">customer_id</span>
+      <span class="col-tag">email</span><span class="col-tag">invoice_date</span><span class="col-tag">order_date</span>
+      <span class="col-tag">purchase_date</span><span class="col-tag">amount</span><span class="col-tag">total</span>
+      <span class="col-tag">sale_value</span><span class="col-tag">grand_total</span><span class="col-tag">customer_name</span>
+      <span class="col-tag">invoice_number</span><span class="col-tag">branch</span><span class="col-tag">product</span>
+    </div>
+  </div>
+
+  <div class="upload-status" id="upload-status">
+    <div class="status-card">
+      <div class="status-icon" id="status-icon">📄</div>
+      <div class="status-text">
+        <div class="status-title" id="status-title">No file selected</div>
+        <div class="status-sub" id="status-sub">Select a file to begin</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+    </div>
+    <div class="err-card" id="err-card"></div>
+    <div style="text-align:center">
+      <button class="analyze-btn" id="analyze-btn" onclick="startAnalysis()">
+        🚀 Analyze My Customers
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PROCESS SCREEN -->
+<div id="process-screen" class="screen">
+  <div class="process-box">
+    <div class="process-spinner"></div>
+    <div class="process-title">Analyzing Your Data</div>
+    <div class="process-step" id="process-step">Reading file...</div>
+    <div class="process-steps-list">
+      <div class="ps-item" id="ps1"><div class="ps-dot"></div> Reading &amp; parsing file</div>
+      <div class="ps-item" id="ps2"><div class="ps-dot"></div> Detecting columns</div>
+      <div class="ps-item" id="ps3"><div class="ps-dot"></div> Cleaning data</div>
+      <div class="ps-item" id="ps4"><div class="ps-dot"></div> Calculating RFM scores</div>
+      <div class="ps-item" id="ps5"><div class="ps-dot"></div> Segmenting customers</div>
+      <div class="ps-item" id="ps6"><div class="ps-dot"></div> Building dashboard</div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD SCREEN -->
+<div id="dashboard-screen" class="screen">
+  <div class="dash-header">
+    <div class="dash-title">
+      <h2>📊 Customer RFM Intelligence Dashboard</h2>
+      <p id="dash-subtitle">Analysis complete</p>
+    </div>
+    <div class="dash-actions">
+      <button class="theme-toggle" onclick="toggleDark()" id="theme-btn">☀️ Light Mode</button>
+      <button class="btn-export btn-excel" onclick="exportExcel()">⬇ Excel Report</button>
+      <button class="btn-export btn-csv" onclick="exportCSV()">⬇ Download CSV</button>
+      <button class="btn-export btn-new" onclick="resetTool()">↑ New Analysis</button>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- SEGMENT OVERVIEW -->
+  <div class="seg-grid" id="seg-grid"></div>
+
+  <!-- CHARTS -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Customer Distribution by Segment</h3>
+      <div class="chart-wrap"><canvas id="pie-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Revenue by Customer Segment</h3>
+      <div class="chart-wrap"><canvas id="bar-chart"></canvas></div>
+    </div>
+  </div>
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Monthly Purchase Trend</h3>
+      <div class="chart-wrap"><canvas id="line-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Customer Value Distribution</h3>
+      <div class="chart-wrap"><canvas id="histogram-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- AI INSIGHTS -->
+  <div class="insights-card">
+    <h3>🤖 AI Business Intelligence — Powered by Your Data</h3>
+    <div class="insights-grid" id="insights-list"></div>
+  </div>
+
+  <!-- TOP CUSTOMERS TABLE -->
+  <div class="table-card">
+    <div class="table-hdr">
+      <h3>🏆 Top 20 High Value Customers</h3>
+      <button class="btn-export btn-excel" onclick="exportSegmentExcel('top20')" style="font-size:.72rem;padding:.4rem .8rem">⬇ Export</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Name</th><th>Last Purchase</th><th>Frequency</th><th>Total Spend</th><th>RFM Score</th><th>Segment</th></tr></thead>
+        <tbody id="top-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- AT RISK TABLE -->
+  <div class="table-card">
+    <div class="table-hdr">
+      <h3>⚠️ At Risk &amp; Lost Customer Recovery List</h3>
+      <button class="btn-export btn-export" style="background:var(--orange);color:white;font-size:.72rem;padding:.4rem .8rem" onclick="exportSegmentExcel('atrisk')">⬇ Export Recovery List</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Name</th><th>Days Since Purchase</th><th>Frequency</th><th>Total Spend</th><th>Segment</th><th>Suggested Action</th></tr></thead>
+        <tbody id="risk-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FULL TABLE WITH FILTERS -->
+  <div class="table-card">
+    <div class="table-hdr" style="flex-direction:column;align-items:stretch;gap:.8rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+        <h3>📋 All Customers — RFM Scores</h3>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+          <span id="total-rows-label" style="font-size:.75rem;color:var(--muted);font-weight:600"></span>
+          <button class="btn-export btn-excel" onclick="exportFiltered()" style="font-size:.72rem;padding:.4rem .8rem">⬇ Export Filtered</button>
+        </div>
+      </div>
+      <!-- FILTER TOOLBAR -->
+      <div class="filter-bar">
+        <div class="filter-segments" id="filter-segments">
+          <button class="filter-btn active" data-seg="all" onclick="filterTable('all',this)">All</button>
+          <button class="filter-btn seg-champions" data-seg="Champions" onclick="filterTable('Champions',this)">🏆 Champions</button>
+          <button class="filter-btn seg-loyal" data-seg="Loyal Customers" onclick="filterTable('Loyal Customers',this)">💙 Loyal</button>
+          <button class="filter-btn seg-potential" data-seg="Potential Loyalists" onclick="filterTable('Potential Loyalists',this)">⭐ Potential</button>
+          <button class="filter-btn seg-new" data-seg="New Customers" onclick="filterTable('New Customers',this)">🟣 New</button>
+          <button class="filter-btn seg-attention" data-seg="Need Attention" onclick="filterTable('Need Attention',this)">🔔 Attention</button>
+          <button class="filter-btn seg-atrisk" data-seg="At Risk" onclick="filterTable('At Risk',this)">⚠️ At Risk</button>
+          <button class="filter-btn seg-lost" data-seg="Lost Customers" onclick="filterTable('Lost Customers',this)">🔴 Lost</button>
+          <button class="filter-btn seg-bigspenders" data-seg="Big Spenders" onclick="filterTable('Big Spenders',this)">💰 Big Spenders</button>
+          <button class="filter-btn seg-inactive" data-seg="Inactive Customers" onclick="filterTable('Inactive Customers',this)">😴 Inactive</button>
+        </div>
+        <input type="text" class="filter-search" id="filter-search" placeholder="🔍 Search customer name, ID, product..." oninput="applyFilters()">
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Customer ID</th><th>Name</th><th>Recency</th><th>Frequency</th><th>Monetary</th><th>R</th><th>F</th><th>M</th><th>RFM</th><th>Segment</th></tr></thead>
+        <tbody id="full-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="data-cleaning.js"></script>
+<script src="rfm-engine.js"></script>
+<script>
+/* ═══════ APP CONTROLLER ═══════ */
+let APP = { file: null, rawRows: null, cleanedData: null, rfmResult: null, charts: [] };
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ─── DRAG & DROP ─── */
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('drag-over'); }));
+['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('drag-over'); }));
+dropZone.addEventListener('drop', ev => { if (ev.dataTransfer.files.length) handleFile(ev.dataTransfer.files[0]); });
+fileInput.addEventListener('change', ev => { if (ev.target.files.length) handleFile(ev.target.files[0]); });
+
+function handleFile(file) {
+  APP.file = file;
+  const errCard = document.getElementById('err-card');
+  const analyzeBtn = document.getElementById('analyze-btn');
+  errCard.style.display = 'none';
+  analyzeBtn.style.display = 'none';
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) {
+    showError('Unsupported file type. Please upload .xlsx, .xls, or .csv');
+    return;
+  }
+
+  document.getElementById('upload-status').style.display = 'block';
+  document.getElementById('status-icon').textContent = '📄';
+  document.getElementById('status-title').textContent = file.name;
+  document.getElementById('status-sub').textContent = `${(file.size/1024).toFixed(1)} KB`;
+  document.getElementById('progress-fill').style.width = '100%';
+
+  setTimeout(() => {
+    document.getElementById('status-icon').textContent = '✅';
+    document.getElementById('status-sub').textContent = `${(file.size/1024).toFixed(1)} KB — Ready to analyze`;
+    analyzeBtn.style.display = 'inline-flex';
+  }, 500);
+}
+
+function showError(msg) {
+  const errCard = document.getElementById('err-card');
+  errCard.textContent = '❌ ' + msg;
+  errCard.style.display = 'block';
+  document.getElementById('upload-status').style.display = 'block';
+}
+
+/* ─── PROCESS STEPS ─── */
+function setStep(n, text) {
+  document.getElementById('process-step').textContent = text;
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById('ps' + i);
+    el.classList.remove('done','active');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  }
+}
+
+async function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ─── MAIN ANALYSIS ─── */
+async function startAnalysis() {
+  if (!APP.file) return;
+  showScreen('process-screen');
+
+  try {
+    // Step 1: Read file
+    setStep(1, 'Reading & parsing file...');
+    await delay(400);
+    APP.rawRows = await DataCleaner.readFile(APP.file);
+
+    // Validate row count
+    const rowCheck = DataCleaner.validateRowCount(APP.rawRows);
+    if (!rowCheck.ok) { throw new Error(rowCheck.msg); }
+
+    // Step 2: Detect columns
+    setStep(2, 'Detecting columns...');
+    await delay(400);
+    const { map, missing } = DataCleaner.detectColumns(APP.rawRows);
+    if (missing.length) { throw new Error('Missing required columns: ' + missing.join(', ')); }
+
+    // Step 3: Clean data
+    setStep(3, 'Cleaning data...');
+    await delay(500);
+    const { data, stats } = DataCleaner.cleanData(APP.rawRows, map);
+    APP.cleanedData = data;
+    if (!data.length) { throw new Error('No valid data rows after cleaning. Check your file format.'); }
+
+    // Step 4: Calculate RFM
+    setStep(4, 'Calculating RFM scores...');
+    await delay(500);
+    APP.rfmResult = RFMEngine.calculate(data);
+
+    // Step 5: Segmenting
+    setStep(5, 'Segmenting customers...');
+    await delay(400);
+
+    // Step 6: Build dashboard
+    setStep(6, 'Building dashboard...');
+    await delay(400);
+    buildDashboard(APP.rfmResult, stats);
+
+    showScreen('dashboard-screen');
+  } catch (err) {
+    showScreen('upload-screen');
+    showError(err.message || 'Analysis failed. Please check your file.');
+  }
+}
+
+/* ─── DASHBOARD BUILDER ─── */
+function fmt(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+function fmtDate(d) { if (!d) return '—'; const dt = new Date(d); return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function badge(seg) { return `<span class="seg-badge badge-${RFMEngine.segmentClass(seg)}">${seg}</span>`; }
+
+function buildDashboard(r, stats) {
+  document.getElementById('dash-subtitle').textContent =
+    `${r.totalCustomers.toLocaleString()} customers analyzed · ${stats.cleaned.toLocaleString()} transactions · ${stats.duplicates} duplicates removed`;
+
+  // KPIs
+  document.getElementById('kpi-grid').innerHTML = [
+    kpi('Total Customers', r.totalCustomers.toLocaleString(), ''),
+    kpi('Total Revenue', fmt(r.totalRevenue), '', true),
+    kpi('Champions', r.segments['Champions'].count.toLocaleString(), r.segments['Champions'].pct+'% of total'),
+    kpi('Loyal Customers', r.segments['Loyal Customers'].count.toLocaleString(), r.segments['Loyal Customers'].pct+'%'),
+    kpi('At Risk', r.segments['At Risk'].count.toLocaleString(), r.segments['At Risk'].pct+'%'),
+    kpi('Lost Customers', r.segments['Lost Customers'].count.toLocaleString(), r.segments['Lost Customers'].pct+'%'),
+    kpi('New Customers', r.segments['New Customers'].count.toLocaleString(), r.segments['New Customers'].pct+'%'),
+    kpi('Avg Customer Value', fmt(r.avgCustomerValue), ''),
+    kpi('Repeat Rate', r.repeatRate+'%', 'purchased more than once'),
+  ].join('');
+
+  // Segments
+  const segNames = ['Champions','Loyal Customers','Potential Loyalists','New Customers','Need Attention','At Risk','Lost Customers','Big Spenders','Inactive Customers'];
+  document.getElementById('seg-grid').innerHTML = segNames.map(s =>
+    `<div class="seg-card ${RFMEngine.segmentClass(s)}"><div class="seg-name">${s}</div><div class="seg-count">${r.segments[s].count}</div><div class="seg-pct">${r.segments[s].pct}% · ${fmt(r.segments[s].revenue)}</div></div>`
+  ).join('');
+
+  // Charts
+  APP.charts.forEach(c => c.destroy());
+  APP.charts = [];
+  buildPie(r, segNames);
+  buildBar(r, segNames);
+  buildLine(r);
+  buildHistogram(r);
+
+  // Insights
+  const insights = RFMEngine.generateInsights(r);
+  document.getElementById('insights-list').innerHTML = insights.map(i =>
+    `<div class="insight-item priority-${i.priority||'info'}">
+      <div class="insight-top"><span class="insight-icon">${i.icon}</span><span class="insight-cat">${i.cat||''}</span></div>
+      <div class="insight-text">${i.text}</div>
+      ${i.action ? `<div class="insight-action">${i.action}</div>` : ''}
+    </div>`
+  ).join('');
+
+  // Top 20
+  document.getElementById('top-table').innerHTML = r.customers.slice(0, 20).map((c, i) =>
+    `<tr><td>${i+1}</td><td>${c.customer_id}</td><td>${c.customer_name||'—'}</td><td>${fmtDate(c.last_purchase_date)}</td><td>${c.frequency}</td><td>${fmt(c.monetary)}</td><td><strong>${c.rfm_score}</strong></td><td>${badge(c.segment)}</td></tr>`
+  ).join('');
+
+  // At Risk
+  const riskCusts = r.customers.filter(c => ['At Risk','Lost Customers','Need Attention','Inactive Customers'].includes(c.segment));
+  document.getElementById('risk-table').innerHTML = riskCusts.slice(0, 30).map((c, i) =>
+    `<tr><td>${i+1}</td><td>${c.customer_id}</td><td>${c.customer_name||'—'}</td><td>${c.recency_days} days</td><td>${c.frequency}</td><td>${fmt(c.monetary)}</td><td>${badge(c.segment)}</td><td>${RFMEngine.suggestAction(c.segment, c.recency_days)}</td></tr>`
+  ).join('');
+
+  // Full table
+  document.getElementById('full-table').innerHTML = r.customers.map((c, i) =>
+    `<tr><td>${i+1}</td><td>${c.customer_id}</td><td>${c.customer_name||'—'}</td><td>${c.recency_days}d</td><td>${c.frequency}</td><td>${fmt(c.monetary)}</td><td>${c.r_score}</td><td>${c.f_score}</td><td>${c.m_score}</td><td><strong>${c.rfm_score}</strong></td><td>${badge(c.segment)}</td></tr>`
+  ).join('');
+  document.getElementById('total-rows-label').textContent = r.customers.length + ' customers';
+}
+
+function kpi(label, value, sub, accent) {
+  return `<div class="kpi-card${accent?' accent':''}"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
+}
+
+/* ─── CHARTS ─── */
+function destroyChart(canvasId) {
+  const existing = Chart.getChart(canvasId);
+  if (existing) existing.destroy();
+}
+
+function isDark() { return document.body.classList.contains('dark'); }
+function gridColor() { return isDark() ? 'rgba(255,255,255,.08)' : '#f0f0f0'; }
+function textColor() { return isDark() ? '#94a3b8' : '#6b7280'; }
+
+function buildPie(r, segNames) {
+  destroyChart('pie-chart');
+  const ctx = document.getElementById('pie-chart').getContext('2d');
+  const active = segNames.filter(s => r.segments[s].count > 0);
+  APP.charts.push(new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: active,
+      datasets: [{ data: active.map(s => r.segments[s].count),
+        backgroundColor: active.map(s => RFMEngine.segmentColor(s)),
+        borderWidth: 2, borderColor: isDark() ? '#111827' : '#ffffff' }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'right', labels:{ font:{size:11,weight:'600'}, padding:10, color:textColor(), usePointStyle:true, pointStyle:'circle' } },
+        tooltip:{
+          backgroundColor: isDark() ? '#1e293b' : '#0a0e1a',
+          titleFont:{size:13,weight:'700'}, bodyFont:{size:12},
+          padding:12, cornerRadius:10, displayColors:true,
+          callbacks:{
+            label: ctx => {
+              const seg = ctx.label;
+              const count = ctx.raw;
+              const pct = r.segments[seg].pct;
+              const rev = '₹' + r.segments[seg].revenue.toLocaleString('en-IN');
+              return [` ${count} customers (${pct}%)`, ` Revenue: ${rev}`];
+            }
+          }
+        }
+      }
+    }
+  }));
+}
+
+function buildBar(r, segNames) {
+  destroyChart('bar-chart');
+  const ctx = document.getElementById('bar-chart').getContext('2d');
+  const active = segNames.filter(s => r.segments[s].revenue > 0);
+  APP.charts.push(new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: active,
+      datasets: [{
+        label: 'Revenue',
+        data: active.map(s => r.segments[s].revenue),
+        backgroundColor: active.map(s => RFMEngine.segmentColor(s) + 'cc'),
+        hoverBackgroundColor: active.map(s => RFMEngine.segmentColor(s)),
+        borderRadius: 6, borderSkipped: false }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor: isDark() ? '#1e293b' : '#0a0e1a',
+          titleFont:{size:13,weight:'700'}, bodyFont:{size:12},
+          padding:12, cornerRadius:10,
+          callbacks:{
+            title: ctx => ctx[0].label,
+            label: ctx => {
+              const seg = ctx.label;
+              const rev = '₹' + ctx.raw.toLocaleString('en-IN');
+              const count = r.segments[seg].count;
+              const avg = count ? '₹' + Math.round(ctx.raw / count).toLocaleString('en-IN') : '—';
+              return [` Total Revenue: ${rev}`, ` Customers: ${count}`, ` Avg per customer: ${avg}`];
+            }
+          }
+        }
+      },
+      scales:{
+        y:{ticks:{callback:v=>'₹'+v.toLocaleString('en-IN'),color:textColor(),font:{size:10}},grid:{color:gridColor()}},
+        x:{ticks:{font:{size:8},color:textColor(),maxRotation:45},grid:{display:false}}
+      }
+    }
+  }));
+}
+
+function buildLine(r) {
+  destroyChart('line-chart');
+  const ctx = document.getElementById('line-chart').getContext('2d');
+  const trend = r.monthlyTrend;
+  APP.charts.push(new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: trend.map(t => t.month),
+      datasets: [
+        { label:'Transactions', data:trend.map(t=>t.count), borderColor:'#1a56db', backgroundColor:'rgba(26,86,219,.12)', fill:true, tension:.4, pointRadius:4, pointHoverRadius:7, borderWidth:2.5 },
+        { label:'Revenue', data:trend.map(t=>t.revenue), borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.12)', fill:true, tension:.4, pointRadius:4, pointHoverRadius:7, borderWidth:2.5, yAxisID:'y1' }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      scales:{
+        y:{position:'left',grid:{color:gridColor()},ticks:{color:textColor(),font:{size:10}}},
+        y1:{position:'right',grid:{display:false},ticks:{callback:v=>'₹'+v.toLocaleString('en-IN'),color:textColor(),font:{size:10}}}
+      },
+      plugins:{
+        legend:{labels:{font:{size:11,weight:'600'},color:textColor(),usePointStyle:true,pointStyle:'circle',padding:12}},
+        tooltip:{
+          backgroundColor: isDark() ? '#1e293b' : '#0a0e1a',
+          titleFont:{size:13,weight:'700'}, bodyFont:{size:12},
+          padding:12, cornerRadius:10, mode:'index', intersect:false,
+          callbacks:{
+            label: ctx => {
+              if (ctx.dataset.yAxisID === 'y1') return ` Revenue: ₹${ctx.raw.toLocaleString('en-IN')}`;
+              return ` Transactions: ${ctx.raw}`;
+            }
+          }
+        }
+      }
+    }
+  }));
+}
+
+function buildHistogram(r) {
+  destroyChart('histogram-chart');
+  const ctx = document.getElementById('histogram-chart').getContext('2d');
+  const values = r.customers.map(c => c.monetary);
+  const max = Math.max(...values);
+  const bins = 8;
+  const binSize = Math.ceil(max / bins);
+  const labels = [];
+  const counts = [];
+  for (let i = 0; i < bins; i++) {
+    const lo = i * binSize;
+    const hi = (i + 1) * binSize;
+    labels.push('₹' + lo.toLocaleString('en-IN') + '-' + hi.toLocaleString('en-IN'));
+    counts.push(values.filter(v => v >= lo && v < hi).length);
+  }
+  APP.charts.push(new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label:'Customers', data:counts,
+        backgroundColor: counts.map((_, i) => `hsla(${220 + i*15}, 70%, ${50 + i*3}%, 0.75)`),
+        borderRadius: 4, borderSkipped: false }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor: isDark() ? '#1e293b' : '#0a0e1a',
+          padding:12, cornerRadius:10,
+          callbacks:{ label: ctx => ` ${ctx.raw} customers in this spend range` }
+        }
+      },
+      scales:{
+        y:{ticks:{color:textColor(),font:{size:10}},grid:{color:gridColor()},title:{display:true,text:'Customer Count',color:textColor(),font:{size:10}}},
+        x:{ticks:{font:{size:7},color:textColor(),maxRotation:45},grid:{display:false}}
+      }
+    }
+  }));
+}
+
+/* ─── DARK MODE ─── */
+function toggleDark() {
+  document.body.classList.toggle('dark');
+  const isDarkNow = document.body.classList.contains('dark');
+  document.getElementById('theme-btn').textContent = isDarkNow ? '☀️ Light Mode' : '🌙 Dark Mode';
+  // Rebuild charts with new colors
+  if (APP.rfmResult) {
+    APP.charts.forEach(c => c.destroy());
+    APP.charts = [];
+    const segNames = ['Champions','Loyal Customers','Potential Loyalists','New Customers','Need Attention','At Risk','Lost Customers','Big Spenders','Inactive Customers'];
+    buildPie(APP.rfmResult, segNames);
+    buildBar(APP.rfmResult, segNames);
+    buildLine(APP.rfmResult);
+    buildHistogram(APP.rfmResult);
+  }
+}
+
+/* ─── EXPORTS ─── */
+function exportExcel() {
+  if (!APP.rfmResult) return;
+  const rows = APP.rfmResult.customers.map(c => ({
+    'Customer ID': c.customer_id, 'Name': c.customer_name, 'Last Purchase': fmtDate(c.last_purchase_date),
+    'Recency (days)': c.recency_days, 'Frequency': c.frequency, 'Monetary': c.monetary,
+    'Avg Order Value': c.average_order_value, 'R Score': c.r_score, 'F Score': c.f_score, 'M Score': c.m_score,
+    'RFM Score': c.rfm_score, 'Segment': c.segment
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'RFM Analysis');
+  XLSX.writeFile(wb, 'RFM_Analysis_Report.xlsx');
+}
+
+function exportCSV() {
+  if (!APP.rfmResult) return;
+  const rows = APP.rfmResult.customers.map(c =>
+    [c.customer_id, c.customer_name, fmtDate(c.last_purchase_date), c.recency_days, c.frequency, c.monetary, c.average_order_value, c.r_score, c.f_score, c.m_score, c.rfm_score, c.segment].join(',')
+  );
+  const csv = 'Customer ID,Name,Last Purchase,Recency,Frequency,Monetary,Avg Order,R,F,M,RFM,Segment\n' + rows.join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'RFM_Analysis.csv';
+  a.click();
+}
+
+function exportSegmentExcel(type) {
+  if (!APP.rfmResult) return;
+  let custs;
+  if (type === 'top20') custs = APP.rfmResult.customers.slice(0, 20);
+  else custs = APP.rfmResult.customers.filter(c => ['At Risk','Lost Customers','Need Attention','Inactive Customers'].includes(c.segment));
+  const rows = custs.map(c => ({
+    'Customer ID': c.customer_id, 'Name': c.customer_name, 'Recency': c.recency_days,
+    'Frequency': c.frequency, 'Monetary': c.monetary, 'RFM': c.rfm_score, 'Segment': c.segment,
+    'Action': RFMEngine.suggestAction(c.segment, c.recency_days)
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, type === 'top20' ? 'Top Customers' : 'Recovery List');
+  XLSX.writeFile(wb, type === 'top20' ? 'Top_20_Customers.xlsx' : 'Recovery_List.xlsx');
+}
+
+function resetTool() {
+  APP = { file: null, rawRows: null, cleanedData: null, rfmResult: null, charts: [] };
+  document.getElementById('file-input').value = '';
+  document.getElementById('upload-status').style.display = 'none';
+  document.getElementById('err-card').style.display = 'none';
+  document.getElementById('analyze-btn').style.display = 'none';
+  document.getElementById('progress-fill').style.width = '0%';
+  showScreen('upload-screen');
+}
+</script>
+
+<!-- ═══════ CUSTOMER 360 PROFILE DRAWER ═══════ -->
+<div class="c360-overlay" id="c360-overlay" onclick="closeC360()"></div>
+<div class="c360-drawer" id="c360-drawer">
+  <div class="c360-header">
+    <div>
+      <div class="c360-title" id="c360-name">Customer Profile</div>
+      <div class="c360-sub" id="c360-id"></div>
+    </div>
+    <button class="c360-close" onclick="closeC360()">✕</button>
+  </div>
+  <div class="c360-body" id="c360-body"></div>
+</div>
+
+<style>
+.c360-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;opacity:0;pointer-events:none;transition:opacity .3s}
+.c360-overlay.open{opacity:1;pointer-events:auto}
+.c360-drawer{position:fixed;top:0;right:-520px;width:500px;max-width:100vw;height:100vh;background:var(--surface);z-index:201;transition:right .35s cubic-bezier(.16,1,.3,1);overflow-y:auto;box-shadow:-8px 0 40px rgba(0,0,0,.2);display:flex;flex-direction:column}
+.c360-drawer.open{right:0}
+.c360-header{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:2}
+.c360-title{font-size:1.1rem;font-weight:800;color:var(--dark)}
+.c360-sub{font-size:.75rem;color:var(--muted);margin-top:.15rem}
+.c360-close{background:none;border:none;font-size:1.2rem;color:var(--muted);cursor:pointer;padding:4px;transition:color .2s}
+.c360-close:hover{color:var(--dark)}
+.c360-body{padding:1.5rem;flex:1}
+
+/* Profile sections */
+.c360-seg{display:inline-block;padding:.25rem .8rem;border-radius:100px;font-size:.72rem;font-weight:800;margin-bottom:1rem}
+.c360-metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-bottom:1.2rem}
+.c360-metric{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:.7rem .8rem;text-align:center}
+.c360-metric-label{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem}
+.c360-metric-val{font-size:1rem;font-weight:900;color:var(--dark)}
+
+.c360-rfm-row{display:flex;gap:.4rem;margin-bottom:1.2rem;justify-content:center}
+.c360-rfm-box{width:52px;height:52px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:1.1rem;color:white}
+.c360-rfm-lbl{font-size:.5rem;font-weight:700;letter-spacing:.08em;opacity:.8;margin-top:1px}
+
+.c360-section{margin-bottom:1.2rem}
+.c360-section-title{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem}
+.c360-ai-card{background:linear-gradient(135deg,#0a0e1a,#111827);border-radius:12px;padding:.8rem 1rem;margin-bottom:.5rem;display:flex;gap:.5rem;align-items:flex-start}
+.c360-ai-icon{font-size:.9rem;flex-shrink:0;margin-top:.1rem}
+.c360-ai-text{color:rgba(255,255,255,.8);font-size:.78rem;line-height:1.55}
+
+.c360-tl{border-left:2px solid var(--border);margin-left:.6rem;padding-left:1rem}
+.c360-tl-item{position:relative;padding-bottom:.8rem}
+.c360-tl-item::before{content:'';position:absolute;left:-1.35rem;top:.35rem;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.c360-tl-date{font-size:.68rem;color:var(--muted);font-weight:600}
+.c360-tl-detail{font-size:.78rem;color:var(--dark);margin-top:.1rem}
+.c360-tl-amt{font-size:.78rem;font-weight:700;color:var(--accent)}
+
+.c360-actions{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.c360-act{display:flex;align-items:center;gap:.3rem;padding:.45rem .8rem;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;border:none;transition:all .2s}
+.c360-act:hover{transform:translateY(-1px)}
+.c360-act-wa{background:#25d366;color:white}
+.c360-act-email{background:var(--accent);color:white}
+.c360-act-copy{background:rgba(0,0,0,.06);color:var(--dark)}
+.c360-act-vip{background:#f59e0b;color:white}
+.c360-act-export{background:var(--dark);color:white}
+body.dark .c360-act-copy{background:rgba(255,255,255,.1);color:var(--dark)}
+body.dark .c360-act-export{background:rgba(255,255,255,.15);color:var(--dark)}
+
+.c360-notes-area{width:100%;min-height:60px;border:1px solid var(--border);border-radius:10px;padding:.6rem .8rem;font-family:inherit;font-size:.78rem;color:var(--dark);background:var(--bg);resize:vertical}
+.c360-notes-save{margin-top:.5rem;background:var(--accent);color:white;border:none;border-radius:8px;padding:.4rem 1rem;font-size:.72rem;font-weight:700;cursor:pointer;transition:all .2s}
+.c360-notes-save:hover{background:#1e40af}
+.c360-notes-status{font-size:.68rem;color:var(--green);margin-left:.6rem;display:none}
+
+@media(max-width:540px){
+  .c360-drawer{width:100vw}
+  .c360-metrics{grid-template-columns:1fr 1fr}
+}
+</style>
+
+<script>
+/* ═══════ CUSTOMER 360 PROFILE ═══════ */
+const WA_NUMBER = '+918943870403';
+
+function openC360(customerId) {
+  if (!APP.rfmResult) return;
+  const c = APP.rfmResult.customers.find(x => x.customer_id === customerId);
+  if (!c) return;
+
+  // Find transactions
+  const txns = (APP.cleanedData || []).filter(t => t.customer_id === customerId)
+    .sort((a, b) => new Date(b.invoice_date) - new Date(a.invoice_date));
+
+  const cls = RFMEngine.segmentClass(c.segment);
+  const color = RFMEngine.segmentColor(c.segment);
+
+  document.getElementById('c360-name').textContent = c.customer_name || c.customer_id;
+  document.getElementById('c360-id').textContent = `ID: ${c.customer_id} · ${c.segment}`;
+
+  const highOrder = txns.length ? Math.max(...txns.map(t=>t.amount)) : c.monetary;
+  const lowOrder = txns.length ? Math.min(...txns.map(t=>t.amount)) : c.monetary;
+  const favProduct = c.products && c.products.length ? c.products[0] : '—';
+  const branch = c.branches && c.branches.length ? c.branches[0] : '—';
+
+  // Saved notes
+  const noteKey = 'c360_note_' + customerId;
+  const savedNote = localStorage.getItem(noteKey) || '';
+
+  // AI recommendations
+  const aiRecs = [];
+  if (c.segment === 'Champions') {
+    aiRecs.push({icon:'🏆',text:'VIP customer — offer exclusive loyalty rewards or early access to new products.'});
+    aiRecs.push({icon:'💎',text:'Consider premium membership or cashback program to maintain engagement.'});
+  } else if (c.segment === 'At Risk') {
+    aiRecs.push({icon:'⚠️',text:`Inactive for ${c.recency_days} days. Send a personalized win-back offer immediately.`});
+    aiRecs.push({icon:'📱',text:'WhatsApp campaign with 15-20% discount may re-engage this customer.'});
+  } else if (c.segment === 'Lost Customers') {
+    aiRecs.push({icon:'🔴',text:`Lost customer — ${c.recency_days} days since last purchase. Try a comeback offer.`});
+    aiRecs.push({icon:'📧',text:'Send a "We miss you" email with special discount code.'});
+  } else if (c.segment === 'New Customers') {
+    aiRecs.push({icon:'🟣',text:'New customer — send welcome offer and product recommendations.'});
+    aiRecs.push({icon:'🔄',text:'Focus on converting to repeat buyer within 30 days.'});
+  } else if (c.segment === 'Loyal Customers') {
+    aiRecs.push({icon:'💙',text:'Loyal customer — ideal for referral programs and upsell offers.'});
+    aiRecs.push({icon:'⭐',text:'Consider upgrading to VIP tier or offering bundle deals.'});
+  } else if (c.segment === 'Big Spenders') {
+    aiRecs.push({icon:'💰',text:'High spender — offer premium products or exclusive collections.'});
+    aiRecs.push({icon:'👑',text:'Invite to VIP loyalty program for maximum retention.'});
+  } else {
+    aiRecs.push({icon:'📊',text:`Current segment: ${c.segment}. Monitor activity and adjust engagement.`});
+    aiRecs.push({icon:'💡',text:'Send periodic product updates to maintain brand awareness.'});
+  }
+
+  let html = '';
+
+  // Segment badge
+  html += `<div class="c360-seg badge-${cls}" style="background:${color}22;color:${color}">${c.segment} · RFM ${c.rfm_score}</div>`;
+
+  // Action buttons
+  html += `<div class="c360-actions">
+    <button class="c360-act c360-act-wa" onclick="c360WhatsApp('${c.customer_id}','${c.customer_name}')">📱 WhatsApp</button>
+    <button class="c360-act c360-act-copy" onclick="c360Copy('${c.customer_id}')">📋 Copy ID</button>
+    <button class="c360-act c360-act-vip" onclick="c360Tag('${c.customer_id}','VIP')">👑 Tag VIP</button>
+    <button class="c360-act c360-act-export" onclick="c360Export('${c.customer_id}')">⬇ Export</button>
+  </div>`;
+
+  // Financial metrics
+  html += `<div class="c360-section"><div class="c360-section-title">💰 Financial Overview</div>
+    <div class="c360-metrics">
+      <div class="c360-metric"><div class="c360-metric-label">Lifetime Spend</div><div class="c360-metric-val">${fmt(c.monetary)}</div></div>
+      <div class="c360-metric"><div class="c360-metric-label">Avg Order</div><div class="c360-metric-val">${fmt(c.average_order_value)}</div></div>
+      <div class="c360-metric"><div class="c360-metric-label">Total Orders</div><div class="c360-metric-val">${c.frequency}</div></div>
+      <div class="c360-metric"><div class="c360-metric-label">Highest Order</div><div class="c360-metric-val">${fmt(highOrder)}</div></div>
+      <div class="c360-metric"><div class="c360-metric-label">Lowest Order</div><div class="c360-metric-val">${fmt(lowOrder)}</div></div>
+      <div class="c360-metric"><div class="c360-metric-label">Days Inactive</div><div class="c360-metric-val">${c.recency_days}d</div></div>
+    </div></div>`;
+
+  // RFM Scores visual
+  html += `<div class="c360-section"><div class="c360-section-title">📊 RFM Scores</div>
+    <div class="c360-rfm-row">
+      <div class="c360-rfm-box" style="background:${c.r_score>=4?'#10b981':c.r_score>=3?'#eab308':'#ef4444'}">${c.r_score}<div class="c360-rfm-lbl">RECENCY</div></div>
+      <div class="c360-rfm-box" style="background:${c.f_score>=4?'#1a56db':c.f_score>=3?'#6366f1':'#f97316'}">${c.f_score}<div class="c360-rfm-lbl">FREQUENCY</div></div>
+      <div class="c360-rfm-box" style="background:${c.m_score>=4?'#8b5cf6':c.m_score>=3?'#0ea5e9':'#6b7280'}">${c.m_score}<div class="c360-rfm-lbl">MONETARY</div></div>
+    </div></div>`;
+
+  // Product & Branch
+  html += `<div class="c360-section"><div class="c360-section-title">🏪 Intelligence</div>
+    <div class="c360-metrics" style="grid-template-columns:1fr 1fr">
+      <div class="c360-metric"><div class="c360-metric-label">Top Product</div><div class="c360-metric-val" style="font-size:.78rem">${favProduct}</div></div>
+      <div class="c360-metric"><div class="c360-metric-label">Branch</div><div class="c360-metric-val" style="font-size:.78rem">${branch}</div></div>
+    </div></div>`;
+
+  // AI Recommendations
+  html += `<div class="c360-section"><div class="c360-section-title">🤖 AI Recommendations</div>`;
+  aiRecs.forEach(r => {
+    html += `<div class="c360-ai-card"><span class="c360-ai-icon">${r.icon}</span><span class="c360-ai-text">${r.text}</span></div>`;
+  });
+  html += `</div>`;
+
+  // Transaction timeline
+  if (txns.length) {
+    html += `<div class="c360-section"><div class="c360-section-title">📅 Purchase Timeline (${txns.length} transactions)</div><div class="c360-tl">`;
+    txns.slice(0, 15).forEach(t => {
+      html += `<div class="c360-tl-item"><div class="c360-tl-date">${fmtDate(t.invoice_date)}${t.invoice_number ? ' · #'+t.invoice_number : ''}</div>
+        <div class="c360-tl-detail">${t.product || '—'}</div>
+        <div class="c360-tl-amt">${fmt(t.amount)}</div></div>`;
+    });
+    if (txns.length > 15) html += `<div style="font-size:.72rem;color:var(--muted);padding:.4rem 0">+ ${txns.length - 15} more transactions</div>`;
+    html += `</div></div>`;
+  }
+
+  // Notes
+  html += `<div class="c360-section"><div class="c360-section-title">📝 Internal Notes</div>
+    <textarea class="c360-notes-area" id="c360-notes" placeholder="Add notes about this customer...">${savedNote}</textarea>
+    <div style="display:flex;align-items:center"><button class="c360-notes-save" onclick="saveC360Note('${customerId}')">💾 Save Note</button><span class="c360-notes-status" id="c360-note-status">✓ Saved</span></div>
+  </div>`;
+
+  document.getElementById('c360-body').innerHTML = html;
+  document.getElementById('c360-overlay').classList.add('open');
+  document.getElementById('c360-drawer').classList.add('open');
+}
+
+function closeC360() {
+  document.getElementById('c360-overlay').classList.remove('open');
+  document.getElementById('c360-drawer').classList.remove('open');
+}
+
+function saveC360Note(id) {
+  const note = document.getElementById('c360-notes').value;
+  localStorage.setItem('c360_note_' + id, note);
+  const s = document.getElementById('c360-note-status');
+  s.style.display = 'inline'; setTimeout(() => s.style.display = 'none', 2000);
+}
+
+function c360WhatsApp(id, name) {
+  const msg = encodeURIComponent(`Hi, regarding customer ${name || id} — follow-up from RFM analysis.`);
+  window.open(`https://wa.me/${WA_NUMBER.replace(/[^0-9]/g,'')}?text=${msg}`, '_blank');
+}
+
+function c360Copy(id) {
+  navigator.clipboard.writeText(id).then(() => alert('Customer ID copied: ' + id));
+}
+
+function c360Tag(id, tag) {
+  const key = 'c360_tags_' + id;
+  const tags = JSON.parse(localStorage.getItem(key) || '[]');
+  if (!tags.includes(tag)) { tags.push(tag); localStorage.setItem(key, JSON.stringify(tags)); }
+  alert(`${tag} tag added to customer ${id}`);
+}
+
+function c360Export(customerId) {
+  if (!APP.rfmResult) return;
+  const c = APP.rfmResult.customers.find(x => x.customer_id === customerId);
+  if (!c) return;
+  const rows = [{ 'Customer ID':c.customer_id, 'Name':c.customer_name, 'Segment':c.segment,
+    'RFM Score':c.rfm_score, 'Recency':c.recency_days, 'Frequency':c.frequency,
+    'Monetary':c.monetary, 'Avg Order':c.average_order_value, 'R':c.r_score, 'F':c.f_score, 'M':c.m_score,
+    'Last Purchase':fmtDate(c.last_purchase_date) }];
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Customer Profile');
+  XLSX.writeFile(wb, `Customer_${customerId}_Profile.xlsx`);
+}
+
+// Make table rows clickable
+document.addEventListener('click', function(e) {
+  const row = e.target.closest('#top-table tr, #risk-table tr, #full-table tr');
+  if (!row) return;
+  const cells = row.querySelectorAll('td');
+  if (cells.length < 2) return;
+  const customerId = cells[1].textContent.trim();
+  if (customerId) openC360(customerId);
+});
+</script>
+
+</body>
+</html>
